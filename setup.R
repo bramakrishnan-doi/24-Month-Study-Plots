@@ -30,18 +30,32 @@ rhdb_ok <- requireNamespace("rhdb", quietly = TRUE) &&
   identical(as.character(utils::packageVersion("rhdb")), "0.3.0")
 
 if (!rhdb_ok) {
-  if (!requireNamespace("remotes", quietly = TRUE)) {
-    stop("The remotes package could not be installed, so rhdb cannot be installed.", call. = FALSE)
+  message("Installing rhdb v0.3.0 from BoulderCodeHub/rhdb...")
+  installed_rhdb <- FALSE
+  if (requireNamespace("remotes", quietly = TRUE)) {
+    tryCatch({
+      remotes::install_github(
+        "BoulderCodeHub/rhdb",
+        ref = "v0.3.0",
+        lib = user_lib,
+        upgrade = "never",
+        dependencies = NA
+      )
+      installed_rhdb <- TRUE
+    }, error = function(e) {
+      message("remotes::install_github failed: ", conditionMessage(e))
+      message("Falling back to direct tarball installation...")
+    })
   }
 
-  message("Installing rhdb v0.3.0 from BoulderCodeHub/rhdb...")
-  remotes::install_github(
-    "BoulderCodeHub/rhdb",
-    ref = "v0.3.0",
-    lib = user_lib,
-    upgrade = "never",
-    dependencies = NA
-  )
+  if (!installed_rhdb) {
+    install.packages(
+      "https://github.com/BoulderCodeHub/rhdb/archive/refs/tags/v0.3.0.tar.gz",
+      lib = user_lib,
+      repos = NULL,
+      type = "source"
+    )
+  }
 } else {
   message("rhdb v0.3.0 is already installed.")
 }

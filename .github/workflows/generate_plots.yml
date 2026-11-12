@@ -122,13 +122,30 @@ jobs:
           restore-keys: ${{ runner.os }}-r-
 
       - name: Install R packages
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
         run: |
           Rscript -e '
             cran_pkgs <- c("httr", "fs", "tidyr", "dplyr", "ggplot2", "lubridate", "scales", "zoo", "magick", "remotes")
             to_install <- setdiff(cran_pkgs, rownames(installed.packages()))
             if (length(to_install) > 0) install.packages(to_install)
             if (!requireNamespace("rhdb", quietly = TRUE)) {
-              remotes::install_github("BoulderCodeHub/rhdb", ref = "v0.3.0", upgrade = "never")
+              pat <- Sys.getenv("GITHUB_PAT")
+              installed <- FALSE
+              tryCatch({
+                remotes::install_github("BoulderCodeHub/rhdb", ref = "v0.3.0", upgrade = "never", auth_token = if (nzchar(pat)) pat else NULL)
+                installed <- TRUE
+              }, error = function(e) {
+                message("remotes::install_github failed: ", conditionMessage(e))
+                message("Falling back to direct tarball installation...")
+              })
+              if (!installed) {
+                install.packages(
+                  "https://github.com/BoulderCodeHub/rhdb/archive/refs/tags/v0.3.0.tar.gz",
+                  repos = NULL,
+                  type = "source"
+                )
+              }
             }
           '
 
