@@ -26,7 +26,7 @@ on:
       min_6_mrid:
         description: 'Probable Minimum (6.0 maf) MRID'
         required: true
-        default: '3332'
+        default: '3343'
         type: string
       min_6_run_date:
         description: 'Probable Minimum Run Month (YYYY-MM; leave blank for study month)'
@@ -36,7 +36,7 @@ on:
       most_6_mrid:
         description: 'Most Probable (6.0 maf) MRID'
         required: true
-        default: '3331'
+        default: '3342'
         type: string
       most_6_run_date:
         description: 'Most Probable (6.0 maf) Run Month (YYYY-MM; leave blank for study month)'
@@ -46,7 +46,7 @@ on:
       most_7_mrid:
         description: 'Most Probable (7.0 maf) MRID'
         required: true
-        default: '3333'
+        default: '3344'
         type: string
       most_7_run_date:
         description: 'Most Probable (7.0 maf) Run Month (YYYY-MM; leave blank for study month)'
@@ -56,7 +56,7 @@ on:
       max_7_mrid:
         description: 'Probable Maximum (7.0 maf) MRID'
         required: true
-        default: '3328'
+        default: '3340'
         type: string
       max_7_run_date:
         description: 'Probable Maximum Run Month (YYYY-MM; leave blank for latest Jan/Apr/Aug/Oct)'
@@ -66,12 +66,12 @@ on:
       powell_y_min:
         description: 'Lake Powell Y-Axis Min Elevation (ft)'
         required: true
-        default: '3400'
+        default: '3450'
         type: string
       powell_y_max:
         description: 'Lake Powell Y-Axis Max Elevation (ft)'
         required: true
-        default: '3625'
+        default: '3650'
         type: string
       mead_y_min:
         description: 'Lake Mead Y-Axis Min Elevation (ft)'
