@@ -132,15 +132,24 @@ archive_options_html <- ""
 if (length(archived_months) > 0) {
   opts <- vapply(archived_months, function(m) {
     selected <- if (identical(m, study_month)) " selected" else ""
-    sprintf('<option value="archive/%s/Powell24MS.png"%s>%s</option>', m, selected, m)
+    paste0('<option value="archive/', m, '/Powell24MS.png"', selected, '>', m, '</option>')
   }, character(1))
-  archive_options_html <- sprintf(
-    '<div class="archive-bar"><label for="archive-select"><strong>Archived Runs:</strong></label> <select id="archive-select" onchange="switchArchive(this.value)">%s</select></div>',
-    paste(opts, collapse = "")
+  archive_options_html <- paste0(
+    '<div class="archive-bar"><label for="archive-select"><strong>Archived Runs:</strong></label> ',
+    '<select id="archive-select" onchange="switchArchive(this.value)">',
+    paste(opts, collapse = ""),
+    '</select></div>'
   )
 }
 
-html_content <- sprintf('<!DOCTYPE html>
+gh_repo <- Sys.getenv("GITHUB_REPOSITORY", "")
+actions_link <- if (nzchar(gh_repo)) {
+  paste0('&bull; To run a new study or update inputs, visit the <a href="https://github.com/', gh_repo, '/actions" target="_blank">Actions</a> tab in GitHub.')
+} else {
+  ""
+}
+
+html_template <- '<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -166,7 +175,7 @@ html_content <- sprintf('<!DOCTYPE html>
       padding-bottom: 50px;
     }
     header {
-      background: linear-gradient(135deg, var(--usbr-dark) 0%%, var(--usbr-blue) 100%%);
+      background: linear-gradient(135deg, var(--usbr-dark) 0%, var(--usbr-blue) 100%);
       color: #ffffff;
       padding: 36px 20px;
       text-align: center;
@@ -279,7 +288,7 @@ html_content <- sprintf('<!DOCTYPE html>
       text-align: center;
     }
     .image-wrapper img {
-      max-width: 100%%;
+      max-width: 100%;
       height: auto;
       border-radius: 4px;
       box-shadow: 0 1px 6px rgba(0,0,0,0.1);
@@ -302,7 +311,7 @@ html_content <- sprintf('<!DOCTYPE html>
       padding-bottom: 8px;
     }
     table.meta-table {
-      width: 100%%;
+      width: 100%;
       border-collapse: collapse;
       font-size: 0.92rem;
     }
@@ -315,7 +324,7 @@ html_content <- sprintf('<!DOCTYPE html>
       background: #f7fafc;
       color: var(--muted-color);
       font-weight: 600;
-      width: 30%%;
+      width: 30%;
     }
     footer {
       text-align: center;
@@ -345,25 +354,25 @@ html_content <- sprintf('<!DOCTYPE html>
 <body>
   <header>
     <h1>Lake Powell &amp; Lake Mead 24-Month Study</h1>
-    <div class="subtitle">Projections from %s 24-Month Study Inflow Scenarios</div>
+    <div class="subtitle">Projections from {{SUBTITLE_MONTHS}} 24-Month Study Inflow Scenarios</div>
     <div class="badge-bar">
-      <span class="badge">Study Month: <strong>%s</strong></span>
-      <span class="badge">Plot Window: <strong>%s to %s</strong></span>
-      <span class="badge">Generated: <strong>%s</strong></span>
+      <span class="badge">Study Month: <strong>{{STUDY_MONTH}}</strong></span>
+      <span class="badge">Plot Window: <strong>{{STUDY_MONTH}} to {{END_MONTH}}</strong></span>
+      <span class="badge">Generated: <strong>{{GEN_DATE_UTC}}</strong></span>
       <span class="badge">Data Source: <strong>Reclamation HDB API</strong></span>
     </div>
   </header>
 
   <div class="container">
-    %s
+    {{ARCHIVE_BAR}}
 
     <!-- Lake Powell Card -->
     <section class="plot-card">
       <div class="card-header">
         <h2>Lake Powell End-of-Month Elevations</h2>
         <div class="btn-group">
-          <a id="powell-dl-png" class="btn btn-primary" href="Powell24MS.png" download="Powell24MS_%s.png">Download PNG</a>
-          <a id="powell-dl-pdf" class="btn btn-outline" href="Powell24MS.pdf" download="Powell24MS_%s.pdf">Download PDF</a>
+          <a id="powell-dl-png" class="btn btn-primary" href="Powell24MS.png" download="Powell24MS_{{STUDY_MONTH}}.png">Download PNG</a>
+          <a id="powell-dl-pdf" class="btn btn-outline" href="Powell24MS.pdf" download="Powell24MS_{{STUDY_MONTH}}.pdf">Download PDF</a>
         </div>
       </div>
       <div class="image-wrapper">
@@ -378,8 +387,8 @@ html_content <- sprintf('<!DOCTYPE html>
       <div class="card-header">
         <h2>Lake Mead End-of-Month Elevations</h2>
         <div class="btn-group">
-          <a id="mead-dl-png" class="btn btn-primary" href="Mead24MS.png" download="Mead24MS_%s.png">Download PNG</a>
-          <a id="mead-dl-pdf" class="btn btn-outline" href="Mead24MS.pdf" download="Mead24MS_%s.pdf">Download PDF</a>
+          <a id="mead-dl-png" class="btn btn-primary" href="Mead24MS.png" download="Mead24MS_{{STUDY_MONTH}}.png">Download PNG</a>
+          <a id="mead-dl-pdf" class="btn btn-outline" href="Mead24MS.pdf" download="Mead24MS_{{STUDY_MONTH}}.pdf">Download PDF</a>
         </div>
       </div>
       <div class="image-wrapper">
@@ -395,66 +404,85 @@ html_content <- sprintf('<!DOCTYPE html>
       <table class="meta-table">
         <tr>
           <th>Study Month</th>
-          <td>%s</td>
+          <td>{{STUDY_MONTH}}</td>
         </tr>
         <tr>
           <th>Plot Range</th>
-          <td>Through %s</td>
+          <td>Through {{END_MONTH}}</td>
         </tr>
         <tr>
           <th>Probable Minimum (6.0 maf)</th>
-          <td>MRID %s (Run month: %s)</td>
+          <td>MRID {{MIN_6_MRID}} (Run month: {{MIN_6_RUN}})</td>
         </tr>
         <tr>
           <th>Most Probable (6.0 maf)</th>
-          <td>%s</td>
+          <td>{{MOST_6_STATUS}}</td>
         </tr>
         <tr>
           <th>Most Probable (7.0 maf)</th>
-          <td>%s</td>
+          <td>{{MOST_7_STATUS}}</td>
         </tr>
         <tr>
           <th>Probable Maximum (7.0 maf)</th>
-          <td>MRID %s (Run month: %s)</td>
+          <td>MRID {{MAX_7_MRID}} (Run month: {{MAX_7_RUN}})</td>
         </tr>
         <tr>
           <th>Lake Powell Y-Axis</th>
-          <td>%d to %d ft</td>
+          <td>{{POWELL_Y_MIN}} to {{POWELL_Y_MAX}} ft</td>
         </tr>
         <tr>
           <th>Lake Mead Y-Axis</th>
-          <td>%d to %d ft</td>
+          <td>{{MEAD_Y_MIN}} to {{MEAD_Y_MAX}} ft</td>
         </tr>
       </table>
     </section>
 
     <footer>
-      U.S. Bureau of Reclamation &bull; 24-Month Study Plot Generator &bull;
-      To run a new study or update inputs, visit the <a href="https://github.com/%%7B%%7B%s%%7D%%7D" target="_blank">Actions</a> tab in GitHub.
+      U.S. Bureau of Reclamation &bull; 24-Month Study Plot Generator
+      {{ACTIONS_LINK}}
     </footer>
   </div>
 </body>
-</html>',
-  res$month_heading,
-  study_month,
-  study_month,
-  res$end_month,
-  now_utc,
-  archive_options_html,
-  study_month,
-  study_month,
-  study_month,
-  study_month,
-  study_month,
-  res$end_month,
-  min_6_mrid, min_6_run_date,
-  if (most_6_enabled) sprintf("MRID %s (Run month: %s)", most_6_mrid, most_6_run_date) else "Disabled (Not included)",
-  if (most_7_enabled) sprintf("MRID %s (Run month: %s)", most_7_mrid, most_7_run_date) else "Disabled (Not included)",
-  max_7_mrid, max_7_run_date,
-  as.integer(powell_y_min), as.integer(powell_y_max),
-  as.integer(mead_y_min), as.integer(mead_y_max),
-  "github.repository"
+</html>'
+
+subtitle_text <- if (!is.null(res$month_heading) && nzchar(res$month_heading)) res$month_heading else study_month
+end_month_text <- if (!is.null(res$end_month) && nzchar(res$end_month)) res$end_month else end_month
+
+most_6_status <- if (most_6_enabled) {
+  paste0("MRID ", most_6_mrid, " (Run month: ", most_6_run_date, ")")
+} else {
+  "Disabled (Not included)"
+}
+
+most_7_status <- if (most_7_enabled) {
+  paste0("MRID ", most_7_mrid, " (Run month: ", most_7_run_date, ")")
+} else {
+  "Disabled (Not included)"
+}
+
+replacements <- list(
+  "{{SUBTITLE_MONTHS}}" = subtitle_text,
+  "{{STUDY_MONTH}}"     = study_month,
+  "{{END_MONTH}}"       = end_month_text,
+  "{{GEN_DATE_UTC}}"    = now_utc,
+  "{{ARCHIVE_BAR}}"     = archive_options_html,
+  "{{MIN_6_MRID}}"      = as.character(min_6_mrid),
+  "{{MIN_6_RUN}}"       = as.character(min_6_run_date),
+  "{{MOST_6_STATUS}}"   = most_6_status,
+  "{{MOST_7_STATUS}}"   = most_7_status,
+  "{{MAX_7_MRID}}"      = as.character(max_7_mrid),
+  "{{MAX_7_RUN}}"       = as.character(max_7_run_date),
+  "{{POWELL_Y_MIN}}"    = as.character(as.integer(powell_y_min)),
+  "{{POWELL_Y_MAX}}"    = as.character(as.integer(powell_y_max)),
+  "{{MEAD_Y_MIN}}"      = as.character(as.integer(mead_y_min)),
+  "{{MEAD_Y_MAX}}"      = as.character(as.integer(mead_y_max)),
+  "{{ACTIONS_LINK}}"    = actions_link
 )
+
+html_content <- html_template
+for (tag in names(replacements)) {
+  html_content <- gsub(tag, replacements[[tag]], html_content, fixed = TRUE)
+}
 
 writeLines(html_content, file.path(docs_dir, "index.html"))
 message("Updated docs/index.html successfully.")
