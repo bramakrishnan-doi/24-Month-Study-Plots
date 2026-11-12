@@ -1,0 +1,174 @@
+name: Generate 24-Month Study Plots
+
+on:
+  workflow_dispatch:
+    inputs:
+      study_month:
+        description: 'Study Month (YYYY-MM; leave blank for current month)'
+        required: false
+        default: ''
+        type: string
+      end_month:
+        description: 'Plot End Month (YYYY-MM, optional; leave blank for full 24 months)'
+        required: false
+        default: ''
+        type: string
+      most_6_enabled:
+        description: 'Include Most Probable (6.0 maf release)?'
+        required: true
+        default: true
+        type: boolean
+      most_7_enabled:
+        description: 'Include Most Probable (7.0 maf release)?'
+        required: true
+        default: true
+        type: boolean
+      min_6_mrid:
+        description: 'Probable Minimum (6.0 maf) MRID'
+        required: true
+        default: '3332'
+        type: string
+      min_6_run_date:
+        description: 'Probable Minimum Run Month (YYYY-MM; leave blank for study month)'
+        required: false
+        default: ''
+        type: string
+      most_6_mrid:
+        description: 'Most Probable (6.0 maf) MRID'
+        required: true
+        default: '3331'
+        type: string
+      most_6_run_date:
+        description: 'Most Probable (6.0 maf) Run Month (YYYY-MM; leave blank for study month)'
+        required: false
+        default: ''
+        type: string
+      most_7_mrid:
+        description: 'Most Probable (7.0 maf) MRID'
+        required: true
+        default: '3333'
+        type: string
+      most_7_run_date:
+        description: 'Most Probable (7.0 maf) Run Month (YYYY-MM; leave blank for study month)'
+        required: false
+        default: ''
+        type: string
+      max_7_mrid:
+        description: 'Probable Maximum (7.0 maf) MRID'
+        required: true
+        default: '3328'
+        type: string
+      max_7_run_date:
+        description: 'Probable Maximum Run Month (YYYY-MM; leave blank for latest Jan/Apr/Aug/Oct)'
+        required: false
+        default: ''
+        type: string
+      powell_y_min:
+        description: 'Lake Powell Y-Axis Min Elevation (ft)'
+        required: true
+        default: '3400'
+        type: string
+      powell_y_max:
+        description: 'Lake Powell Y-Axis Max Elevation (ft)'
+        required: true
+        default: '3625'
+        type: string
+      mead_y_min:
+        description: 'Lake Mead Y-Axis Min Elevation (ft)'
+        required: true
+        default: '950'
+        type: string
+      mead_y_max:
+        description: 'Lake Mead Y-Axis Max Elevation (ft)'
+        required: true
+        default: '1100'
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: 'pages'
+  cancel-in-progress: false
+
+jobs:
+  generate-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmagick++-dev libcurl4-openssl-dev
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ hashFiles('scripts/run_github_actions.R', 'generate_plots.R') }}
+          restore-keys: ${{ runner.os }}-r-
+
+      - name: Install R packages
+        run: |
+          Rscript -e '
+            cran_pkgs <- c("httr", "fs", "tidyr", "dplyr", "ggplot2", "lubridate", "scales", "zoo", "magick", "remotes")
+            to_install <- setdiff(cran_pkgs, rownames(installed.packages()))
+            if (length(to_install) > 0) install.packages(to_install)
+            if (!requireNamespace("rhdb", quietly = TRUE)) {
+              remotes::install_github("BoulderCodeHub/rhdb", ref = "v0.3.0", upgrade = "never")
+            }
+          '
+
+      - name: Generate 24MS Plots and GitHub Pages site
+        env:
+          INPUT_STUDY_MONTH: ${{ inputs.study_month }}
+          INPUT_END_MONTH: ${{ inputs.end_month }}
+          INPUT_MOST_6_ENABLED: ${{ inputs.most_6_enabled }}
+          INPUT_MOST_7_ENABLED: ${{ inputs.most_7_enabled }}
+          INPUT_MIN_6_MRID: ${{ inputs.min_6_mrid }}
+          INPUT_MIN_6_RUN_DATE: ${{ inputs.min_6_run_date }}
+          INPUT_MOST_6_MRID: ${{ inputs.most_6_mrid }}
+          INPUT_MOST_6_RUN_DATE: ${{ inputs.most_6_run_date }}
+          INPUT_MOST_7_MRID: ${{ inputs.most_7_mrid }}
+          INPUT_MOST_7_RUN_DATE: ${{ inputs.most_7_run_date }}
+          INPUT_MAX_7_MRID: ${{ inputs.max_7_mrid }}
+          INPUT_MAX_7_RUN_DATE: ${{ inputs.max_7_run_date }}
+          INPUT_POWELL_Y_MIN: ${{ inputs.powell_y_min }}
+          INPUT_POWELL_Y_MAX: ${{ inputs.powell_y_max }}
+          INPUT_MEAD_Y_MIN: ${{ inputs.mead_y_min }}
+          INPUT_MEAD_Y_MAX: ${{ inputs.mead_y_max }}
+        run: |
+          Rscript scripts/run_github_actions.R
+
+      - name: Commit and push outputs to repository
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add output/ docs/
+          git diff --staged --quiet || git commit -m "Update 24MS plots and GitHub Pages [skip ci]"
+          git push
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'docs'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,16 @@
+# History and workspace files
+.Rhistory
+.RData
+.Rproj.user/
+
+# Local R libraries and environments
+.Renviron
+.Rprofile
+
+# Windows temporary files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Output files can either be tracked or ignored.
+# Since you want output files saved in the repo, do NOT ignore output/ or docs/
